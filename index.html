@@ -1,10 +1,29 @@
+<!DOCTYPE html>
 <html>
-  <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-  <script src="app.js"></script>
+    <link rel="stylesheet" href="./lib/jquery-jvectormap-2.0.3.css" type="text/css" media="screen" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="app.js"></script>
+    <script src="./lib/jquery-jvectormap-2.0.3.min.js"></script>
+    <script src="./lib/jquery-jvectormap-world-mill.js"></script>
   
-  <body>
-    <div id="locations">
-    </div>
-  </body>
+    <body>
+        <!--<div id="locations">
+        </div>-->
+        <div id="map" style="width: 600px; height: 400px"></div>
+        <script>
+            $(function () {
+                document.getElementById("map").setAttribute("style", "width:" + screen.width + "px");
+                document.getElementById("map").setAttribute("style", "height:" + (screen.height - 150) + "px");
+                $('#map').vectorMap({
+                    map: 'world_mill',
+                    markerStyle: {
+                        initial: {
+                            fill: '#FF0000'
+                        }
+                    },
+                    markers: []
+                });
+            });
+        </script>
+    </body>
 </html>
