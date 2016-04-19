@@ -23,6 +23,17 @@ function getLocation (relayed_by_ip, callback) {
   });
 }
 
+// Returns output value of transaction
+function getValue (transaction) {
+    var sum = 0;
+    $.each(transaction.x.out, function (i, v) {
+        sum += v.value;
+    });
+
+    // Convert satoshi to bitcoin
+    return sum / 100000000;
+}
+
 // Subscribe to blockchain websocket
 ws.onopen = function (e) {
   ws.send('{"op":"unconfirmed_sub"}');
@@ -31,6 +42,7 @@ ws.onopen = function (e) {
 ws.onmessage = function (e) {
     var transaction = JSON.parse(e.data);
     var relayed_by_ip = transaction.x.relayed_by;
+    var value = getValue(transaction);
 
     // Adds marker on map for each valid location.
     getLocation(relayed_by_ip, function (location, longitude, latitude) {
@@ -43,21 +55,21 @@ ws.onmessage = function (e) {
     if (isTorIP(relayed_by_ip)) {
         $("#locations").append(" TOR");
     }
+}
 
+$(document).ready(function () {
     // Populate torIPList
-    $(document).ready(function () {
-        var textFile = new XMLHttpRequest();
-        textFile.open("GET", "https://raw.githubusercontent.com/cklegrae/Bitcoin-Statistics/master/exit_node_list.txt", false);
-        textFile.onreadystatechange = function () {
-            if (textFile.readyState === 4) {
-                if (textFile.status === 200) {
-                    allText = textFile.responseText;
-                    $.each(textFile.responseText.split("\n"), function (i, val) {
-                        torIPList.push(val);
-                    });
-                }
+    var textFile = new XMLHttpRequest();
+    textFile.open("GET", "https://raw.githubusercontent.com/cklegrae/Bitcoin-Statistics/master/exit_node_list.txt", false);
+    textFile.onreadystatechange = function () {
+        if (textFile.readyState === 4) {
+            if (textFile.status === 200) {
+                allText = textFile.responseText;
+                $.each(textFile.responseText.split("\n"), function (i, val) {
+                    torIPList.push(val);
+                });
             }
         }
-        textFile.send(null);
-    })
-}
+    }
+    textFile.send(null);
+})
