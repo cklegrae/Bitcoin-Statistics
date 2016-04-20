@@ -1,17 +1,21 @@
 var torIPList = new Array;
 var ws = new WebSocket('wss://ws.blockchain.info/inv');
 var NOT_FOUND = "No record found for this IP";
-var markerIndex = 0;
+var EXCHANGE_RATE = 0;
+var markerIndex = -1;
+var session_tx_value = 0;
 
 // Take in relayed_by IP from transaction, and see if it is a Tor node
-function isTorIP (relayed_by_ip) {
-  return ($.inArray(relayed_by_ip, torIPList) !== -1);
+function isTorIP (transaction) {
+    var relayed_by_ip = transaction.x.relayed_by;
+    return ($.inArray(relayed_by_ip, torIPList) !== -1);
 }
 
 // Returns the IP's country of origin
-function getLocation (relayed_by_ip, callback) {
-  var query = "http://geoip.nekudo.com/api/" + relayed_by_ip;
-  $.getJSON(query)
+function getLocation (transaction, callback) {
+    var relayed_by_ip = transaction.x.relayed_by;
+    var query = "http://geoip.nekudo.com/api/" + relayed_by_ip;
+    $.getJSON(query)
     .done(function (data) {
         if (data.type !== "error" && data.country !== false)
             callback(data.city, data.location.longitude, data.location.latitude);
@@ -19,9 +23,9 @@ function getLocation (relayed_by_ip, callback) {
             callback(NOT_FOUND);
     })
     .fail(function (err) {
-      console.log("Error getting JSON feed: " + err);
-  });
-}
+        console.log("Error getting JSON feed: " + err);
+    });
+} 
 
 // Returns output value of transaction
 function getValue (transaction) {
@@ -34,25 +38,36 @@ function getValue (transaction) {
     return sum / 100000000;
 }
 
+// Highlights tor exit nodes
+function highlightTorMarkers () {
+    var map = $("#map").vectorMap("get", "mapObject");
+    // turn the markers a different color
+}
+
 // Subscribe to blockchain websocket
 ws.onopen = function (e) {
-  ws.send('{"op":"unconfirmed_sub"}');
+    ws.send('{"op":"unconfirmed_sub"}');
 }
 
 ws.onmessage = function (e) {
     var transaction = JSON.parse(e.data);
-    var relayed_by_ip = transaction.x.relayed_by;
     var value = getValue(transaction);
 
+    // Current outgoing transactions during session
+    session_tx_value = session_tx_value + value
+    var usd = (session_tx_value * EXCHANGE_RATE).toFixed(2);
+    $("#total").text("Total outgoing BTC during session: " + session_tx_value.toFixed(8)+" ($"+usd+")");
+
     // Adds marker on map for each valid location.
-    getLocation(relayed_by_ip, function (location, longitude, latitude) {
+    getLocation(transaction, function (location, longitude, latitude) {
         if (location !== NOT_FOUND) {
+            markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
-            map.addMarker(markerIndex++, { latLng: [latitude, longitude], name: location });
+            map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location });
         }
     });
-
-    if (isTorIP(relayed_by_ip)) {
+    //debugger
+    if (isTorIP(transaction)) {
         $("#locations").append(" TOR");
     }
 }
@@ -72,4 +87,12 @@ $(document).ready(function () {
         }
     }
     textFile.send(null);
+
+    if ($("#tor-filter").is(":checked")) 
+        highlightTorMarkers();
+
+    // Get current USD exchange rate
+    $.getJSON("https://blockchain.info/ticker", function (data) {
+        EXCHANGE_RATE = data.USD.last;
+    });
 })

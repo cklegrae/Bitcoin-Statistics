@@ -13,6 +13,12 @@
         <div id="filters">
             <h3>Filters</h3>
             <input id="tor-filter" type="checkbox" name="tor-filter" value="tor"/> Hide Tor transactions
+        </div>
+        <br>
+        <div id="Stats for this session">
+            <h3>Stats</h3>
+            <p id="total"></p>
+        </div>
         <script>
             $(function () {
                 document.getElementById("map").setAttribute("style", "width:" + screen.width + "px");
