@@ -1,9 +1,11 @@
 var torIPList = new Array;
 var ws = new WebSocket('wss://ws.blockchain.info/inv');
 var NOT_FOUND = "No record found for this IP";
-var EXCHANGE_RATE = 0;
+var EXCHANGE_RATE;
+
 var markerIndex = -1;
 var session_tx_value = 0;
+var tor_tx_value = 0;
 
 // Take in relayed_by IP from transaction, and see if it is a Tor node
 function isTorIP (transaction) {
@@ -58,6 +60,11 @@ ws.onmessage = function (e) {
     var usd = (session_tx_value * EXCHANGE_RATE).toFixed(2);
     $("#total").text("Total outgoing BTC during session: " + session_tx_value.toFixed(8)+" ($"+usd+")");
 
+    if (isTorIP(transaction)) {
+        tor_tx_value = tor_tx_value + value;
+        var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
+        $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8)+" ($"+usd+")");
+    }
     // Adds marker on map for each valid location.
     getLocation(transaction, function (location, longitude, latitude) {
         if (location !== NOT_FOUND) {
@@ -67,9 +74,7 @@ ws.onmessage = function (e) {
         }
     });
     //debugger
-    if (isTorIP(transaction)) {
-        $("#locations").append(" TOR");
-    }
+
 }
 
 $(document).ready(function () {
