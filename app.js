@@ -60,21 +60,21 @@ ws.onmessage = function (e) {
     var usd = (session_tx_value * EXCHANGE_RATE).toFixed(2);
     $("#total").text("Total outgoing BTC during session: " + session_tx_value.toFixed(8)+" ($"+usd+")");
 
-    if (isTorIP(transaction)) {
-        tor_tx_value = tor_tx_value + value;
-        var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
-        $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8)+" ($"+usd+")");
-    }
     // Adds marker on map for each valid location.
     getLocation(transaction, function (location, longitude, latitude) {
         if (location !== NOT_FOUND) {
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
-            map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location });
+            if (isTorIP(transaction)) {
+                tor_tx_value = tor_tx_value + value;
+                var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
+                $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
+                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FFFF00' } });
+            } else {
+                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FF0000' } });
+            }
         }
     });
-    //debugger
-
 }
 
 $(document).ready(function () {
