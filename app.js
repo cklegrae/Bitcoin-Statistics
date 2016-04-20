@@ -77,6 +77,10 @@ ws.onmessage = function (e) {
     });
 }
 
+
+
+
+
 $(document).ready(function () {
     // Populate torIPList
     var textFile = new XMLHttpRequest();
@@ -93,8 +97,13 @@ $(document).ready(function () {
     }
     textFile.send(null);
 
-    if ($("#tor-filter").is(":checked")) 
-        highlightTorMarkers();
+    $("#tor-filter").change(function() {
+        if ($("#tor-filter").is(":checked")){
+            $("circle[fill='#FFFF00'").hide();
+        }
+        else
+            $("circle[fill='#FFFF00'").show();
+    });
 
     // Get current USD exchange rate
     $.getJSON("https://blockchain.info/ticker", function (data) {
