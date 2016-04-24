@@ -20,20 +20,5 @@
             <p id="total"></p>
             <p id="tor_total"></p>
         </div>
-        <script>
-            $(function () {
-                document.getElementById("map").setAttribute("style", "width:" + screen.width + "px");
-                document.getElementById("map").setAttribute("style", "height:" + (screen.height - 150) + "px");
-                $('#map').vectorMap({
-                    map: 'world_mill',
-                    markerStyle: {
-                        initial: {
-                            fill: '#FF0000'
-                        }
-                    },
-                    markers: []
-                });
-            });
-        </script>
     </body>
 </html>

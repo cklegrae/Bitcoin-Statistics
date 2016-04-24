@@ -40,12 +40,6 @@ function getValue (transaction) {
     return sum / 100000000;
 }
 
-// Highlights tor exit nodes
-function highlightTorMarkers () {
-    var map = $("#map").vectorMap("get", "mapObject");
-    // turn the markers a different color
-}
-
 // Subscribe to blockchain websocket
 ws.onopen = function (e) {
     ws.send('{"op":"unconfirmed_sub"}');
@@ -69,17 +63,13 @@ ws.onmessage = function (e) {
                 tor_tx_value = tor_tx_value + value;
                 var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
                 $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
-                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FFFF00' } });
+                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FFFF00' }, value: getValue(transaction) });
             } else {
-                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FF0000' } });
+                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FF0000' }, value: getValue(transaction) });
             }
         }
     });
 }
-
-
-
-
 
 $(document).ready(function () {
     // Populate torIPList
@@ -109,4 +99,17 @@ $(document).ready(function () {
     $.getJSON("https://blockchain.info/ticker", function (data) {
         EXCHANGE_RATE = data.USD.last;
     });
+
+    document.getElementById("map").setAttribute("style", "width:" + screen.width + "px");
+    document.getElementById("map").setAttribute("style", "height:" + (screen.height - 150) + "px");
+    $('#map').vectorMap({
+        map: 'world_mill',
+        markers: []
+    });
 })
+
+$(document).on("mouseenter", "circle", function () {
+    var map = $("#map").vectorMap("get", "mapObject");
+    var marker = map.markers[$(this).attr("data-index")];
+    $(".jvectormap-tip").append("<br> tx value: " + marker.config.value);
+});
