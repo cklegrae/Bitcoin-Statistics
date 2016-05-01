@@ -6,6 +6,7 @@ var EXCHANGE_RATE;
 var markerIndex = -1;
 var session_tx_value = 0;
 var tor_tx_value = 0;
+var btcValues = [];
 
 // Take in relayed_by IP from transaction, and see if it is a Tor node
 function isTorIP (transaction) {
@@ -20,7 +21,7 @@ function getLocation (transaction, callback) {
     $.getJSON(query)
     .done(function (data) {
         if (data.type !== "error" && data.country !== false)
-            callback(data.city, data.location.longitude, data.location.latitude);
+            callback(data);
         else
             callback(NOT_FOUND);
     })
@@ -47,26 +48,34 @@ ws.onopen = function (e) {
 
 ws.onmessage = function (e) {
     var transaction = JSON.parse(e.data);
-    var value = getValue(transaction);
+    var bitcoinValue = getValue(transaction);
 
     // Current outgoing transactions during session
-    session_tx_value = session_tx_value + value
+    session_tx_value = session_tx_value + bitcoinValue
     var usd = (session_tx_value * EXCHANGE_RATE).toFixed(2);
     $("#total").text("Total outgoing BTC during session: " + session_tx_value.toFixed(8)+" ($"+usd+")");
 
     // Adds marker on map for each valid location.
-    getLocation(transaction, function (location, longitude, latitude) {
-        if (location !== NOT_FOUND) {
+    getLocation(transaction, function (data) {
+        if (data.city !== NOT_FOUND && data.location !== undefined) {
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
             if (isTorIP(transaction)) {
-                tor_tx_value = tor_tx_value + value;
+                tor_tx_value = tor_tx_value + bitcoinValue;
                 var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
                 $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
-                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FFFF00' }, value: getValue(transaction) });
+                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FFFF00' }, value: bitcoinValue });
             } else {
-                map.addMarker(markerIndex, { latLng: [latitude, longitude], name: location, style: { fill: '#FF0000' }, value: getValue(transaction) });
+                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FF0000' }, value: bitcoinValue });
             }
+
+            var torPercent = (($("circle[fill='#FFFF00']").length / $("circle").length) * 100).toFixed(2);
+            $("#tor_perc").text("Percentage of Tor relays: " + torPercent + "%");
+
+            if (btcValues[data.country.code] !== undefined)
+                btcValues[data.country.code] += bitcoinValue;
+            console.log(data.country.code + " added " + bitcoinValue + " at " + data.city);
+            map.series.regions[0].setValues(btcValues);
         }
     });
 }
@@ -88,9 +97,8 @@ $(document).ready(function () {
     textFile.send(null);
 
     $("#tor-filter").change(function() {
-        if ($("#tor-filter").is(":checked")){
-            $("circle[fill='#FFFF00'").hide();
-        }
+        if ($("#tor-filter").is(":checked"))
+            $("circle[fill='#FFFF00']").hide();
         else
             $("circle[fill='#FFFF00'").show();
     });
@@ -102,10 +110,31 @@ $(document).ready(function () {
 
     document.getElementById("map").setAttribute("style", "width:" + screen.width + "px");
     document.getElementById("map").setAttribute("style", "height:" + (screen.height - 150) + "px");
+    
     $('#map').vectorMap({
         map: 'world_mill',
-        markers: []
+        markers: [],
+        series: {
+            regions: [{
+                scale: ['#DEEBF7', '#08519C'], normalizeFunction: 'polynomial', min: '0', max: '10000'
+            }]
+        },
+        zoomOnScroll: false,
+        onRegionTipShow: function (event, label, code) {
+            label.html(
+              "<b>" + label.html() + "</b></br>" +
+              "<b> Value of transactions: </b> $" + (btcValues[code] * EXCHANGE_RATE).toFixed(2) + " (" + (btcValues[code] / session_tx_value * 100).toFixed(2) + "%)"
+            );
+        }
     });
+
+    var map = $("#map").vectorMap("get", "mapObject");
+
+    // Create empty heatmap.
+    for (key in map.regions) {
+        btcValues[key] = 0;
+    }
+
 })
 
 $(document).on("mouseenter", "circle", function () {
