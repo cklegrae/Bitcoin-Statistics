@@ -60,7 +60,7 @@ ws.onmessage = function (e) {
         if (data.city !== NOT_FOUND && data.location !== undefined) {
             // Sometimes the city can't be found, replace it with country.
             if (data.city === false)
-                data.city = "Location in " + data.country.name;
+                data.city = "A location in " + data.country.name;
 
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
@@ -126,9 +126,12 @@ $(document).ready(function () {
         },
         zoomOnScroll: false,
         onRegionTipShow: function (event, tip, code) {
+            var relativePercent = (btcValues[code] / session_tx_value * 100).toFixed(2);
+            if (isNaN(relativePercent))
+                relativePercent = 0;
             tip.html(
               "<b>" + tip.html() + "</b></br>" +
-              "<b> Value of transactions: </b> $" + (btcValues[code] * EXCHANGE_RATE).toFixed(2) + " (" + (btcValues[code] / session_tx_value * 100).toFixed(2) + "%)"
+              "<b> Value of transactions: </b> $" + (btcValues[code] * EXCHANGE_RATE).toFixed(2) + " (" + relativePercent + "%)"
             );
         },
         onMarkerTipShow: function (event, tip, index) {
@@ -145,5 +148,5 @@ $(document).ready(function () {
     for (key in map.regions) {
         btcValues[key] = 0;
     }
-
+    map.series.regions[0].setValues(btcValues);
 })
