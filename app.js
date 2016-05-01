@@ -58,8 +58,13 @@ ws.onmessage = function (e) {
     // Adds marker on map for each valid location.
     getLocation(transaction, function (data) {
         if (data.city !== NOT_FOUND && data.location !== undefined) {
+            // Sometimes the city can't be found, replace it with country.
+            if (data.city === false)
+                data.city = "Location in " + data.country.name;
+
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
+
             if (isTorIP(transaction)) {
                 tor_tx_value = tor_tx_value + bitcoinValue;
                 var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
@@ -74,7 +79,7 @@ ws.onmessage = function (e) {
 
             if (btcValues[data.country.code] !== undefined)
                 btcValues[data.country.code] += bitcoinValue;
-            console.log(data.country.code + " added " + bitcoinValue + " at " + data.city);
+
             map.series.regions[0].setValues(btcValues);
         }
     });
@@ -120,11 +125,17 @@ $(document).ready(function () {
             }]
         },
         zoomOnScroll: false,
-        onRegionTipShow: function (event, label, code) {
-            label.html(
-              "<b>" + label.html() + "</b></br>" +
+        onRegionTipShow: function (event, tip, code) {
+            tip.html(
+              "<b>" + tip.html() + "</b></br>" +
               "<b> Value of transactions: </b> $" + (btcValues[code] * EXCHANGE_RATE).toFixed(2) + " (" + (btcValues[code] / session_tx_value * 100).toFixed(2) + "%)"
             );
+        },
+        onMarkerTipShow: function (event, tip, index) {
+            var marker = map.markers[index];
+            tip.html(
+                "<b>" + tip.html() + "</b></br>" +
+                "<b> tx value: </b>" + marker.config.value);
         }
     });
 
@@ -136,9 +147,3 @@ $(document).ready(function () {
     }
 
 })
-
-$(document).on("mouseenter", "circle", function () {
-    var map = $("#map").vectorMap("get", "mapObject");
-    var marker = map.markers[$(this).attr("data-index")];
-    $(".jvectormap-tip").append("<br> tx value: " + marker.config.value);
-});
