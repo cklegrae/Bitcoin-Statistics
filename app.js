@@ -43,6 +43,25 @@ function getValue (transaction) {
     return sum / 100000000;
 }
 
+// Sorts the values, return array of country codes by value
+function sortValues (hash) {
+    var vals = []; 
+    for(var v in hash)
+        vals.push(v);
+
+    return vals.sort(function (a,b) {
+        return hash[b]-hash[a];
+    });
+}
+
+function updateTable () {
+    var sorted = sortValues(country_table);
+    for (var i = 0; i < 10; i++) {
+        var usd = (country_table[sorted[i]] * EXCHANGE_RATE).toFixed(2);
+        $("#"+i).text(sorted[i] + ": " + country_table[sorted[i]].toFixed(8)+" ($"+usd+")");
+    }
+}
+
 // Subscribe to blockchain websocket
 ws.onopen = function (e) {
     ws.send('{"op":"unconfirmed_sub"}');
@@ -67,7 +86,8 @@ ws.onmessage = function (e) {
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
 
-            debugger
+            var code = data.country.code;
+            country_table[code] = (country_table[code] + bitcoinValue) || bitcoinValue; 
 
             if (isTorIP(transaction)) {
                 tor_tx_value = tor_tx_value + bitcoinValue;
@@ -85,6 +105,7 @@ ws.onmessage = function (e) {
                 btcValues[data.country.code] += bitcoinValue;
 
             map.series.regions[0].setValues(btcValues);
+            updateTable();
         }
         else
             unknown_location_values = unknown_location_values + bitcoinValue;
