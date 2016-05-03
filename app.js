@@ -7,6 +7,8 @@ var markerIndex = -1;
 var session_tx_value = 0;
 var tor_tx_value = 0;
 var btcValues = [];
+var unknown_location_values = 0;
+var country_table = {};
 
 // Take in relayed_by IP from transaction, and see if it is a Tor node
 function isTorIP (transaction) {
@@ -65,6 +67,8 @@ ws.onmessage = function (e) {
             markerIndex = markerIndex + 1;
             var map = $("#map").vectorMap("get", "mapObject");
 
+            debugger
+
             if (isTorIP(transaction)) {
                 tor_tx_value = tor_tx_value + bitcoinValue;
                 var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
@@ -82,7 +86,11 @@ ws.onmessage = function (e) {
 
             map.series.regions[0].setValues(btcValues);
         }
+        else
+            unknown_location_values = unknown_location_values + bitcoinValue;
     });
+    var unknown_usd = (unknown_location_values * EXCHANGE_RATE).toFixed(2);
+    $("#unknown_total").text("Unknown location total: " + unknown_location_values.toFixed(8) +" ($"+unknown_usd+")");
 }
 
 $(document).ready(function () {
