@@ -61,7 +61,7 @@ function updateTable() {
         if (isNaN(country_table[sorted[i]]))
             break;
         var usd = (country_table[sorted[i]] * EXCHANGE_RATE).toFixed(2);
-        $("#"+i).text(map.getRegionName(sorted[i]) + ": " + country_table[sorted[i]].toFixed(8)+" ($"+usd+")");
+        $("#"+i).text(i + 1 + ". " + map.getRegionName(sorted[i]) + ": " + country_table[sorted[i]].toFixed(8)+" ($"+usd+")");
     }
 }
 
@@ -81,9 +81,9 @@ ws.onmessage = function (e) {
 
     // Adds marker on map for each valid location.
     getLocation(transaction, function (data) {
-        if (data.city !== NOT_FOUND && data.location !== undefined) {
+        if (data !== undefined && data.location !== undefined) {
             // Sometimes the city can't be found, replace it with country.
-            if (data.city === false)
+            if (data.city === false || data.city === NOT_FOUND)
                 data.city = "A location in " + data.country.name;
 
             markerIndex = markerIndex + 1;
@@ -92,15 +92,18 @@ ws.onmessage = function (e) {
             var code = data.country.code;
             country_table[code] = (country_table[code] + bitcoinValue) || bitcoinValue;
 
-            if (isTorIP(transaction)) {
-                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FFFF00' }, value: bitcoinValue });
-                tor_tx_value = tor_tx_value + bitcoinValue;
-                var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
-                $("#tor_total").text("Tor relayed transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
-                var torPercent = (($("circle[fill='#FFFF00']").length / $("circle").length) * 100).toFixed(2);
-                $("#tor_perc").text("Percentage of Tor relays: " + torPercent + "%");
-            } else {
-                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FF0000' }, value: bitcoinValue });
+            var filterValue = $("#value-filter")[0].value;
+            if (isNaN(filterValue) || filterValue < bitcoinValue) {
+                if (isTorIP(transaction)) {
+                    map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FFFF00', visibility: 'visible' }, value: bitcoinValue });
+                    tor_tx_value = tor_tx_value + bitcoinValue;
+                    var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
+                    $("#tor_total").text("Tor relayed transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
+                    var torPercent = (($("circle[fill='#FFFF00']").length / $("circle").length) * 100).toFixed(2);
+                    $("#tor_perc").text("Percentage of Tor relays: " + torPercent + "%");
+                } else {
+                    map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FF0000', visibility: 'visible' }, value: bitcoinValue });
+                }
             }
 
             if (btcValues[data.country.code] !== undefined)
