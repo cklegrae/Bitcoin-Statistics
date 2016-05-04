@@ -54,11 +54,14 @@ function sortValues (hash) {
     });
 }
 
-function updateTable () {
+function updateTable() {
+    var map = $("#map").vectorMap("get", "mapObject");
     var sorted = sortValues(country_table);
     for (var i = 0; i < 10; i++) {
+        if (isNaN(country_table[sorted[i]]))
+            break;
         var usd = (country_table[sorted[i]] * EXCHANGE_RATE).toFixed(2);
-        $("#"+i).text(sorted[i] + ": " + country_table[sorted[i]].toFixed(8)+" ($"+usd+")");
+        $("#"+i).text(map.getRegionName(sorted[i]) + ": " + country_table[sorted[i]].toFixed(8)+" ($"+usd+")");
     }
 }
 
@@ -87,19 +90,18 @@ ws.onmessage = function (e) {
             var map = $("#map").vectorMap("get", "mapObject");
 
             var code = data.country.code;
-            country_table[code] = (country_table[code] + bitcoinValue) || bitcoinValue; 
+            country_table[code] = (country_table[code] + bitcoinValue) || bitcoinValue;
 
             if (isTorIP(transaction)) {
+                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FFFF00' }, value: bitcoinValue });
                 tor_tx_value = tor_tx_value + bitcoinValue;
                 var tor_usd = (tor_tx_value * EXCHANGE_RATE).toFixed(2);
-                $("#tor_total").text("Tor transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
-                map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FFFF00' }, value: bitcoinValue });
+                $("#tor_total").text("Tor relayed transaction total: " + tor_tx_value.toFixed(8) + " ($" + tor_usd + ")");
+                var torPercent = (($("circle[fill='#FFFF00']").length / $("circle").length) * 100).toFixed(2);
+                $("#tor_perc").text("Percentage of Tor relays: " + torPercent + "%");
             } else {
                 map.addMarker(markerIndex, { latLng: [data.location.latitude, data.location.longitude], name: data.city, style: { fill: '#FF0000' }, value: bitcoinValue });
             }
-
-            var torPercent = (($("circle[fill='#FFFF00']").length / $("circle").length) * 100).toFixed(2);
-            $("#tor_perc").text("Percentage of Tor relays: " + torPercent + "%");
 
             if (btcValues[data.country.code] !== undefined)
                 btcValues[data.country.code] += bitcoinValue;
@@ -107,8 +109,9 @@ ws.onmessage = function (e) {
             map.series.regions[0].setValues(btcValues);
             updateTable();
         }
-        else
+        else {
             unknown_location_values = unknown_location_values + bitcoinValue;
+        }
     });
     var unknown_usd = (unknown_location_values * EXCHANGE_RATE).toFixed(2);
     $("#unknown_total").text("Unknown location total: " + unknown_location_values.toFixed(8) +" ($"+unknown_usd+")");
@@ -155,7 +158,7 @@ $(document).ready(function () {
         },
         zoomOnScroll: false,
         onRegionTipShow: function (event, tip, code) {
-            var relativePercent = (btcValues[code] / session_tx_value * 100).toFixed(2);
+            var relativePercent = (btcValues[code] / (session_tx_value - unknown_location_values) * 100).toFixed(2);
             if (isNaN(relativePercent))
                 relativePercent = 0;
             tip.html(
